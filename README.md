@@ -76,20 +76,30 @@ You can still call any bundled skill directly, e.g. `/website-builder:impeccable
 
 ## Updates
 
-The vendored skills are kept current automatically: a weekly GitHub Action
-([`.github/workflows/sync.yml`](.github/workflows/sync.yml)) re-vendors each upstream
-at the ref pinned in [`upstreams.json`](upstreams.json), re-patches, bumps the version,
-and commits. **You** get updates with:
+Two independent flows keep things current:
+
+**Upstream skills → this repo (automatic, PR-based).** A weekly GitHub Action
+([`.github/workflows/sync.yml`](.github/workflows/sync.yml)) checks each bundled skill for
+a newer release (per the `update` policy in [`upstreams.json`](upstreams.json)); if there is
+one it bumps the pin, re-vendors + re-patches, bumps the plugin version, and **opens a pull
+request** with a changelog. You get a GitHub notification, review the diff, and merge —
+nothing lands unreviewed. If nothing is newer, it does nothing (no churn).
+
+> One-time: in **Settings → Actions → General → Workflow permissions**, enable *"Read and
+> write permissions"* and *"Allow GitHub Actions to create and approve pull requests"* so the
+> Action can open PRs.
+
+**This repo → your machine (manual).** After a release (yours, or a merged sync PR), pull it
+onto any machine with:
 
 ```bash
 claude plugin update website-builder@jarek-plugins
 ```
 
-(or `/plugin marketplace update` where the slash command is available).
+(or `/plugin marketplace update` where the slash command is available), then reload your editor.
 
-To jump to a newer upstream **release**, bump its `ref` in `upstreams.json` and run
-`bash scripts/sync-upstreams.sh` (the Action re-vendors the pinned ref; it doesn't move
-pins on its own).
+To bump a pin yourself: `python3 scripts/check-upstreams.py` (resolves the latest refs) or edit
+`upstreams.json` directly, then `bash scripts/sync-upstreams.sh --bump`.
 
 ## Extend it (add / swap / remove a skill)
 
