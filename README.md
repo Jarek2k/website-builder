@@ -15,26 +15,34 @@ decided by a blind head-to-head bake-off — see [`scripts/bake-off/`](scripts/b
 
 ## Install
 
-Run these two commands in Claude Code (replace `Jarek2k` with this repo's GitHub owner):
+The way that works **everywhere** — including the VS Code / JetBrains extensions, where
+the in-app `/plugin` command is disabled — is the terminal CLI. In any terminal:
 
-```text
-/plugin marketplace add Jarek2k/website-builder
-/plugin install website-builder
+```bash
+claude plugin marketplace add Jarek2k/website-builder
+claude plugin install website-builder@jarek-plugins
 ```
 
-That's it — **you never type your own name anywhere.** The only name in there is the
-repo's GitHub address (where the code lives, like a `git clone` URL).
+Then reload your editor (VS Code: **Cmd/Ctrl+Shift+P → "Developer: Reload Window"**).
+Verify with `claude plugin list` — `website-builder@jarek-plugins` should show `enabled`.
+
+> **Note on `/plugin`:** the interactive slash command (`/plugin marketplace add …`,
+> `/plugin install website-builder`) works in the terminal TUI, but the **VS Code
+> extension does not expose it** — use the `claude plugin …` commands above there.
+
+You never type your own name anywhere — the only name is the repo address
+`Jarek2k/website-builder` (where the code lives, like a `git clone` URL).
 
 <details><summary>Why are there a couple of names? (the three layers)</summary>
 
 | You see | What it is |
 |---|---|
 | `Jarek2k/website-builder` | the **GitHub repo address** (`owner/repo`) — only used by `marketplace add`. Same for everyone. |
-| `jarek-plugins` | the **marketplace** (catalog) name — written once in this repo's `marketplace.json`, read automatically. You normally never type it. |
+| `jarek-plugins` | the **marketplace** (catalog) name — declared in this repo's `marketplace.json`, read automatically. |
 | `website-builder` | the **plugin** (the actual tool) — what you install and use. |
 
-If the plugin name ever clashes with another installed plugin, disambiguate with
-`/plugin install website-builder@jarek-plugins`. Otherwise the short form above is all you need.
+`website-builder@jarek-plugins` just means "the `website-builder` plugin from the
+`jarek-plugins` catalog".
 </details>
 
 Requirements on your machine: `python3` and `node` (both usually present). A
@@ -73,9 +81,11 @@ The vendored skills are kept current automatically: a weekly GitHub Action
 at the ref pinned in [`upstreams.json`](upstreams.json), re-patches, bumps the version,
 and commits. **You** get updates with:
 
-```text
-/plugin marketplace update
+```bash
+claude plugin update website-builder@jarek-plugins
 ```
+
+(or `/plugin marketplace update` where the slash command is available).
 
 To jump to a newer upstream **release**, bump its `ref` in `upstreams.json` and run
 `bash scripts/sync-upstreams.sh` (the Action re-vendors the pinned ref; it doesn't move
