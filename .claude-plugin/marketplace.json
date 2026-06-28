@@ -1,0 +1,20 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "jarek-website-builder",
+  "description": "Orchestrated website-build pipeline bundling ui-ux-pro-max, emil-design-eng, and impeccable.",
+  "version": "0.1.0",
+  "owner": {
+    "name": "Jarek",
+    "email": "jarekgster@googlemail.com"
+  },
+  "plugins": [
+    {
+      "name": "website-builder",
+      "source": "./plugin",
+      "description": "One-command website builder: orchestrates design-system data, a taste-driven build, motion, and an anti-slop audit across three modes (new / from-reference / improve-existing).",
+      "version": "0.1.0",
+      "category": "design",
+      "keywords": ["ui", "ux", "design", "landing-page", "website", "animation", "audit"]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+name: sync-upstreams
+
+# Keeps the vendored skills current. Runs weekly and on demand: re-clones each
+# upstream at the ref pinned in upstreams.json, re-patches, regenerates NOTICE /
+# VENDOR.lock, bumps the plugin patch version, and commits if anything changed.
+# To pull a NEWER upstream release, bump the `ref` in upstreams.json (this job
+# does not move pins on its own — it re-vendors whatever upstreams.json declares).
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync + patch vendored skills
+        run: bash scripts/sync-upstreams.sh --bump
+
+      - name: Commit if changed
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            git config user.name  "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "chore: sync bundled skills from upstream"
+            git push
+          else
+            echo "No upstream changes."
+          fi

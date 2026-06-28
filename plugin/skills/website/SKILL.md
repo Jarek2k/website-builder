@@ -1,0 +1,145 @@
+---
+name: website
+description: >
+  Build, rebuild, or improve a complete production-quality website or web app, end to end. Use this
+  whenever the user wants to: build/make/design a NEW website, landing page, dashboard, web app, or UI
+  from a brief ("build me a website", "make a landing page", "neue Website bauen", "design a dashboard");
+  REBUILD or REDESIGN from an existing site or URL ("bau das nach", "rebuild this site", "redesign it but
+  keep the logo/brand"); or AUDIT and IMPROVE an existing page or file ("optimize my site", "geh über die
+  HTML", "fix the spacing/typography/animations", "make this production-ready", "why does this look off").
+  Single entry point for front-end build work — orchestrates a design-system data pass, a taste-driven
+  anti-slop build, motion craft, and a production audit. Prefer this over the individual bundled skills.
+argument-hint: "[brief | URL | file/path] [--keep-brand] [--stack next|astro|vite|svelte|html]"
+user-invocable: true
+---
+
+# Website Builder — Orchestrator
+
+You are the conductor of a small team of specialist design skills bundled inside this plugin. You do
+**not** invent palettes, type systems, motion, or audits from scratch — you load the right specialist's
+method and apply it. Your job is sequencing, hand-off, and keeping two builders from doing the same work
+twice.
+
+The lane assignment below was decided by a blind head-to-head bake-off (see `scripts/bake-off/`):
+**impeccable** produces the more distinctive, less-AI-looking, higher-craft build; **ui-ux-pro-max** is
+the stronger systematic data source and production/accessibility checklist; **emil** is the motion
+specialist. Respect those lanes.
+
+## Specialists → assets (the one place to change when swapping a skill)
+
+| Role | Asset to use | How |
+|---|---|---|
+| Data / inspiration | `ui-ux-pro-max` | run its engine: `python3 "$PR/skills/ui-ux-pro-max/scripts/search.py" "<keywords>" --design-system` |
+| Production checklist / audit | `ui-ux-pro-max` | read the rule sections of `$PR/skills/ui-ux-pro-max/SKILL.md`, or query `--domain ux\|style\|color` |
+| Builder (taste, anti-slop) | `impeccable` | read `$PR/skills/impeccable/SKILL.md` + the relevant `reference/<command>.md`, then build |
+| Motion | `emil-design-eng` | read `$PR/skills/emil-design-eng/SKILL.md` and apply |
+| Motion QA gate | `review-animations` | read `$PR/skills/review-animations/SKILL.md` and apply to the motion you added |
+
+**How you "use" a specialist:** these skills are bundled as a knowledge + script library. Load one by
+**Reading its `SKILL.md`** (and only the `reference/` files it points you to for the current task) and
+**running its scripts**. Do not rely on auto-invocation — they are intentionally set
+`disable-model-invocation` so they never fire on their own and compete with you. (A power user may still
+call one directly, e.g. `/website-builder:impeccable audit`; that's fine and bypasses you on purpose.)
+
+## Step 0 — Resolve the plugin root (do this first, once)
+
+```bash
+PR="${CLAUDE_PLUGIN_ROOT}"
+[ -z "$PR" ] && PR="$(ls -d ~/.claude/plugins/cache/*/website-builder/*/ 2>/dev/null | sort | tail -1)"
+echo "$PR"   # all bundled assets live under $PR/skills/<name>/
+```
+Use that absolute `$PR` for every script path below. On Windows use `python` instead of `python3`.
+
+## Step 1 — Detect the mode from the input
+
+- **Input is a brief / description / nothing** → **Mode A (new build)**.
+- **Input is a URL or names an existing live site** → **Mode B (from reference)**.
+- **Input is a file path / existing project / "my site" / "this page"** → **Mode C (improve existing)**.
+
+If genuinely ambiguous, ask one short question. Then run the matching pipeline.
+
+---
+
+## Mode A — Build new from a brief
+
+**A0 · Intake.** Capture product type, audience, tone, and target stack (default **Next.js + Tailwind +
+shadcn/ui**; honor `--stack`). Confirm in 2–3 lines, then proceed. Don't over-interview.
+
+**A1 · Data foundation — ui-ux-pro-max.** Run the engine for a starting design system:
+```bash
+python3 "$PR/skills/ui-ux-pro-max/scripts/search.py" "<product type> <industry> <keywords>" --design-system
+```
+Treat its palette / font-pairing / style / pattern as **candidates and reference data**, not a lock.
+Note its UX-rule domains for the later audit. Do **not** let it author the final page — it is data here.
+
+**A2 · Build — impeccable (lead).** Read `$PR/skills/impeccable/SKILL.md`, then `reference/craft.md`, and
+the references craft.md points to (typically `layout`, `typeset`, `colorize`, `animate`, plus `brand` for
+marketing surfaces or `product` for app UI). You may run `node "$PR/skills/impeccable/scripts/palette.mjs"`
+for a brand seed. Build the real, production-grade page, honoring impeccable's anti-slop doctrine and
+absolute bans. Feed A1's candidates in as options; impeccable's taste decides. This is where the design
+actually gets made.
+
+**A3 · Motion — emil-design-eng.** Read `$PR/skills/emil-design-eng/SKILL.md` and add/refine motion on the
+interactive surfaces only. **Constraint:** do not restructure layout or change the palette/type from A2 —
+motion only.
+
+**A3b · Motion QA — review-animations.** Read `$PR/skills/review-animations/SKILL.md` and review the motion
+you just added against its craft bar. Fix what it flags. (Automatic; no need to ask the user.)
+
+**A4 · Audit & harden — impeccable + ui-ux-pro-max checklist.** Read impeccable `reference/audit.md`,
+`polish.md`, `harden.md` and run them as a **reviewer**. Then cross-check against ui-ux-pro-max's rule set.
+Do **not** run impeccable's `craft`/`shape`/`init` here — those rebuild and would re-litigate A2.
+**Explicitly verify the failure modes a strong taste-build tends to miss** (these cost real points in the
+bake-off): no horizontal overflow / heading clipping at 390px and 768px; body contrast ≥ 4.5:1 with margin;
+a color fallback when using OKLCH; `prefers-reduced-motion` honored; content visible without JS (no section
+gated behind a reveal). Render and read a screenshot at desktop **and** mobile widths before declaring done.
+
+---
+
+## Mode B — Rebuild / redesign from a URL or reference
+
+**B0 · Intake the reference.** Fetch the page with WebFetch (structure + copy). If a browser/screenshot
+tool is available, capture a screenshot for visual fidelity; otherwise proceed from HTML/CSS and say so.
+Download the brand assets to preserve — **logo**, brand colors, fonts.
+
+**B1 · Extract — impeccable.** Read `$PR/skills/impeccable/SKILL.md` + `reference/extract.md` (and
+`document.md`) to capture the reference's design tokens, structure, and brand into a usable system.
+
+**B2 · Branch on intent.**
+- **Faithful rebuild** ("bau das nach", "rebuild this") → reproduce structure, layout, and look in clean,
+  production-grade code. Stay close to the original; improve only correctness (a11y, responsive, semantics).
+- **Redesign, keep brand** (`--keep-brand`, "neu bauen aber Logo behalten") → hold the logo + brand identity
+  fixed, then run the **Mode A** build (A2–A4) with that brand as the seed, regenerating everything else.
+
+**B3 · Finish.** Motion (A3 + A3b) and audit (A4) exactly as in Mode A.
+
+---
+
+## Mode C — Audit & improve an existing page (impeccable's home turf)
+
+**C0 · Read the work.** Read the existing file(s) / project. Treat the existing brand and identity as
+**fixed** unless the user asks to change it (impeccable's "identity-preservation wins").
+
+**C1 · Diagnose.** Read impeccable `reference/audit.md` + `critique.md` and run them over the code. Cross-
+check with the ui-ux-pro-max rule set (`--domain ux` / the SKILL.md checklist). Produce a short, concrete
+findings list (spacing, typography, hierarchy, color/contrast, a11y, anti-slop tells, motion, states).
+
+**C2 · Fix with the matching command.** For each finding, read and apply the matching impeccable reference
+and edit in place: spacing/rhythm → `layout`; typography → `typeset`; flat/garish color → `colorize`;
+motion → `animate` (then read `emil-design-eng` for depth and run the `review-animations` gate); broad
+quality → `polish`; production-readiness (errors, i18n, edge/empty states) → `harden`; performance →
+`optimize`; responsiveness → `adapt`. Re-render and read a screenshot to confirm each fix. Don't invent
+defects to look busy; a clean "first pass is solid" is a valid result.
+
+---
+
+## Cross-cutting rules (all modes)
+
+- **One builder at a time.** ui-ux-pro-max provides data and the checklist; impeccable builds and audits.
+  Never run both as builders on the same surface — that's the conflict this plugin exists to prevent.
+- **Hand-off contract.** Each phase receives the previous phase's concrete file paths + the design tokens.
+  Never re-run an earlier generative phase.
+- **Verify visually.** Before saying "done", render the result and read a screenshot at mobile + desktop.
+  A screenshot you didn't read doesn't count.
+- **Match the project.** In an existing repo, use its framework, components, icon set, and conventions;
+  don't introduce a second stack.
