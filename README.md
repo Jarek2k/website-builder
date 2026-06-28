@@ -1,52 +1,43 @@
 # website-builder
 
-A Claude Code plugin that turns "build me a website" into one command. It bundles
-three best-in-class design skills and **orchestrates** them so you don't have to
-install or invoke them by hand in every project:
+A Claude Code plugin that turns "build me a website" into one command. Describe
+what you want and it produces a real, production-grade page — design system,
+build, motion, and an anti-slop audit — without you installing or invoking a
+single design skill by hand.
 
-- **[ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)** — design-system data engine (161 palettes, font pairings, product-type reasoning, 99 UX rules) + production/accessibility checklist.
-- **[impeccable](https://github.com/pbakaus/impeccable)** — the lead builder: a taste-driven, anti-AI-slop craft + audit engine.
-- **[emil-design-eng](https://github.com/emilkowalski/skills)** — motion & micro-interaction craft (+ a `review-animations` QA gate).
+## How it works
 
-One orchestrator skill (`website`) is the single entry point; the three builders are
-kept out of autonomous routing so they never fight over a request. The lane split
-(impeccable builds, ui-ux-pro-max provides data + audits, emil does motion) was
-decided by a blind head-to-head bake-off — see [`scripts/bake-off/`](scripts/bake-off/README.md).
+One orchestrator skill, **`website`**, is the single entry point. It doesn't
+invent palettes, type, or motion itself — it sequences three bundled specialist
+skills and hands work between them so two builders never do the same job twice:
+
+| Skill | Its job in the pipeline |
+|---|---|
+| **[impeccable](https://github.com/pbakaus/impeccable)** | the lead builder — taste-driven, anti-AI-slop craft + the final audit |
+| **[ui-ux-pro-max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)** | design-system data (161 palettes, font pairings, 99 UX rules) + the production/accessibility checklist |
+| **[emil-design-eng](https://github.com/emilkowalski/skills)** | motion & micro-interactions, with a `review-animations` QA gate |
+
+The specialists are kept out of autonomous routing, so only `website` fires on a
+request and loads each specialist on demand. This lane split was decided by a
+blind head-to-head bake-off; the mechanics live in
+[`docs/maintaining.md`](docs/maintaining.md).
 
 ## Install
 
-The way that works **everywhere** — including the VS Code / JetBrains extensions, where
-the in-app `/plugin` command is disabled — is the terminal CLI. In any terminal:
+The way that works **everywhere** — including the VS Code / JetBrains extensions,
+where the in-app `/plugin` command is disabled — is the terminal CLI:
 
 ```bash
 claude plugin marketplace add Jarek2k/website-builder
 claude plugin install website-builder@jarek-plugins
 ```
 
-Then reload your editor (VS Code: **Cmd/Ctrl+Shift+P → "Developer: Reload Window"**).
-Verify with `claude plugin list` — `website-builder@jarek-plugins` should show `enabled`.
+Then reload your editor (VS Code: **Cmd/Ctrl+Shift+P → "Developer: Reload
+Window"**). Verify with `claude plugin list`. Update later with
+`claude plugin update website-builder@jarek-plugins`.
 
-> **Note on `/plugin`:** the interactive slash command (`/plugin marketplace add …`,
-> `/plugin install website-builder`) works in the terminal TUI, but the **VS Code
-> extension does not expose it** — use the `claude plugin …` commands above there.
-
-You never type your own name anywhere — the only name is the repo address
-`Jarek2k/website-builder` (where the code lives, like a `git clone` URL).
-
-<details><summary>Why are there a couple of names? (the three layers)</summary>
-
-| You see | What it is |
-|---|---|
-| `Jarek2k/website-builder` | the **GitHub repo address** (`owner/repo`) — only used by `marketplace add`. Same for everyone. |
-| `jarek-plugins` | the **marketplace** (catalog) name — declared in this repo's `marketplace.json`, read automatically. |
-| `website-builder` | the **plugin** (the actual tool) — what you install and use. |
-
-`website-builder@jarek-plugins` just means "the `website-builder` plugin from the
-`jarek-plugins` catalog".
-</details>
-
-Requirements on your machine: `python3` and `node` (both usually present). A
-browser/Playwright MCP is optional but improves the URL-rebuild mode and visual checks.
+Requirements: `python3` and `node` (both usually present). A browser/Playwright
+MCP is optional but improves URL rebuilds and visual checks.
 
 ## Use it
 
@@ -61,71 +52,28 @@ Just describe what you want — the orchestrator picks the mode automatically:
 "Redesign this site but keep our logo and brand colors." (--keep-brand)
 
 # Audit & improve an existing page
-"Go over ./index.html — fix the spacing, typography, and animations, make it production-ready."
+"Go over ./index.html — fix the spacing, typography, and animations."
 ```
 
-Three modes, one skill:
+Three modes, picked from your input:
 
-| Mode | Trigger | Pipeline |
-|---|---|---|
-| **A — New** | a brief | shape+confirm → data (ui-ux-pro-max) → build (impeccable) → motion (emil) → motion-QA → audit |
-| **B — Reference** | a URL/site | fetch + extract → faithful rebuild *or* redesign-keep-brand → motion → audit |
-| **C — Improve** | a file/project | diagnose (impeccable + ui-ux-pro-max checklist) → targeted fixes in place |
+- **New** — from a brief → shape & confirm, then data → build → motion → audit.
+- **From a reference** — from a URL or site → fetch & extract, then a faithful
+  rebuild *or* a redesign that keeps the brand → motion → audit.
+- **Improve** — from a file or project → diagnose, then targeted fixes in place.
 
-You can still call any bundled skill directly, e.g. `/website-builder:impeccable audit`.
-
-## Updates
-
-Two independent flows keep things current:
-
-**Upstream skills → this repo (automatic, PR-based).** A weekly GitHub Action
-([`.github/workflows/sync.yml`](.github/workflows/sync.yml)) checks each bundled skill for
-a newer release (per the `update` policy in [`upstreams.json`](upstreams.json)); if there is
-one it bumps the pin, re-vendors + re-patches, bumps the plugin version, and **opens a pull
-request** with a changelog. You get a GitHub notification, review the diff, and merge —
-nothing lands unreviewed. If nothing is newer, it does nothing (no churn).
-
-> One-time: in **Settings → Actions → General → Workflow permissions**, enable *"Read and
-> write permissions"* and *"Allow GitHub Actions to create and approve pull requests"* so the
-> Action can open PRs.
-
-**This repo → your machine (manual).** After a release (yours, or a merged sync PR), pull it
-onto any machine with:
-
-```bash
-claude plugin update website-builder@jarek-plugins
-```
-
-(or `/plugin marketplace update` where the slash command is available), then reload your editor.
-
-To bump a pin yourself: `python3 scripts/check-upstreams.py` (resolves the latest refs) or edit
-`upstreams.json` directly, then `bash scripts/sync-upstreams.sh --bump`.
-
-## Extend it (add / swap / remove a skill)
-
-Everything is data-driven via [`upstreams.json`](upstreams.json):
-
-- **Add** a skill → add one entry (repo, ref, source subpath, role, license, patch directives).
-- **Swap** a skill → change its entry + repoint the role row in the orchestrator's table.
-- **Remove** → delete the entry.
-
-Then `bash scripts/sync-upstreams.sh`. The sync + [`patch-frontmatter.py`](scripts/patch-frontmatter.py)
-scripts contain no skill-specific code, so most additions need zero code. To decide
-*whether* a new builder is actually better than the current one, run the reusable
-[bake-off harness](scripts/bake-off/README.md).
-
-## How conflicts are prevented
-
-Each vendored skill is patched to `disable-model-invocation: true`, so only the
-`website` orchestrator auto-fires; the specialists are loaded by it on demand (it reads
-their `SKILL.md` + runs their scripts). Hard-coded `.claude/skills/...` paths are
-rewritten to `${CLAUDE_PLUGIN_ROOT}/...` during vendoring. impeccable's always-on
-anti-slop hook and browser "live" mode are intentionally not wired (the audit phase
-covers quality; the live mode needs a running browser).
+You can still call any bundled skill directly, e.g.
+`/website-builder:impeccable audit`.
 
 ## Credits & licenses
 
 This plugin **vendors** the upstream skills; each keeps its own license (copies in
-[`third_party/`](third_party/), summarized in [`NOTICE`](NOTICE)):
-ui-ux-pro-max (MIT), emil-design-eng (MIT), impeccable (Apache-2.0). All credit for the
-design intelligence belongs to their authors. The orchestrator and tooling here are MIT.
+[`third_party/`](third_party/), summarized in [`NOTICE`](NOTICE)): ui-ux-pro-max
+(MIT), emil-design-eng (MIT), impeccable (Apache-2.0). All credit for the design
+intelligence belongs to their authors. The orchestrator and tooling here are MIT.
+
+---
+
+Maintaining, extending, or forking this plugin? See
+[`docs/maintaining.md`](docs/maintaining.md) for the upstream-sync automation, how
+to add/swap a skill, and how conflicts between the bundled builders are prevented.
