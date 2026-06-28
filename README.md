@@ -68,7 +68,7 @@ Three modes, one skill:
 
 | Mode | Trigger | Pipeline |
 |---|---|---|
-| **A — New** | a brief | data (ui-ux-pro-max) → build (impeccable) → motion (emil) → motion-QA → audit |
+| **A — New** | a brief | shape+confirm → data (ui-ux-pro-max) → build (impeccable) → motion (emil) → motion-QA → audit |
 | **B — Reference** | a URL/site | fetch + extract → faithful rebuild *or* redesign-keep-brand → motion → audit |
 | **C — Improve** | a file/project | diagnose (impeccable + ui-ux-pro-max checklist) → targeted fixes in place |
 

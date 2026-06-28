@@ -62,8 +62,15 @@ If genuinely ambiguous, ask one short question. Then run the matching pipeline.
 
 ## Mode A — Build new from a brief
 
-**A0 · Intake.** Capture product type, audience, tone, and target stack (default **Next.js + Tailwind +
-shadcn/ui**; honor `--stack`). Confirm in 2–3 lines, then proceed. Don't over-interview.
+**A0 · Shape — discover, then confirm (do NOT skip this).** Before any build, run impeccable's shape step:
+read `$PR/skills/impeccable/reference/shape.md` and follow it. Run **one focused discovery round** — call the
+AskUserQuestion tool with 2–3 questions covering: the page's purpose/goal, the audience and their state of
+mind, the **real content/data** it must show, scope & fidelity, and visual direction (color strategy + a
+one-sentence scene + 1–2 named anchor references). Fold the stack default (**Next.js + Tailwind + shadcn/ui**,
+honor `--stack`) in as a constraint — don't make it the headline question. Then present a **compact design
+brief (3–5 bullets)** — what you're building, the primary user action, the visual lane, key sections/states —
+and **stop for explicit confirm/override. Do not build in the same turn.** Skip the discovery round only when
+the prompt already pins purpose + content + direction unambiguously; the brief + confirmation are never skipped.
 
 **A1 · Data foundation — ui-ux-pro-max.** Run the engine for a starting design system:
 ```bash
@@ -74,9 +81,10 @@ Note its UX-rule domains for the later audit. Do **not** let it author the final
 
 **A2 · Build — impeccable (lead).** Read `$PR/skills/impeccable/SKILL.md`, then `reference/craft.md`, and
 the references craft.md points to (typically `layout`, `typeset`, `colorize`, `animate`, plus `brand` for
-marketing surfaces or `product` for app UI). You may run `node "$PR/skills/impeccable/scripts/palette.mjs"`
-for a brand seed. Build the real, production-grade page, honoring impeccable's anti-slop doctrine and
-absolute bans. Feed A1's candidates in as options; impeccable's taste decides. This is where the design
+marketing surfaces or `product` for app UI). **Shape is already done and confirmed in A0 — skip craft.md's
+Step 1 (shape); treat the confirmed brief as the locked direction** and go straight to its build steps. You
+may run `node "$PR/skills/impeccable/scripts/palette.mjs"` for a brand seed. Build the real, production-grade
+page, honoring impeccable's anti-slop doctrine and absolute bans. Feed A1's candidates in as options; impeccable's taste decides. This is where the design
 actually gets made.
 
 **A3 · Motion — emil-design-eng.** Read `$PR/skills/emil-design-eng/SKILL.md` and add/refine motion on the
@@ -109,7 +117,8 @@ Download the brand assets to preserve — **logo**, brand colors, fonts.
 - **Faithful rebuild** ("bau das nach", "rebuild this") → reproduce structure, layout, and look in clean,
   production-grade code. Stay close to the original; improve only correctness (a11y, responsive, semantics).
 - **Redesign, keep brand** (`--keep-brand`, "neu bauen aber Logo behalten") → hold the logo + brand identity
-  fixed, then run the **Mode A** build (A2–A4) with that brand as the seed, regenerating everything else.
+  fixed, then run the **Mode A** pipeline (A0 shape gate → A2–A4) with that brand as the seed, regenerating
+  everything else. In the A0 discovery, only ask what the reference didn't already answer.
 
 **B3 · Finish.** Motion (A3 + A3b) and audit (A4) exactly as in Mode A.
 
@@ -118,7 +127,9 @@ Download the brand assets to preserve — **logo**, brand colors, fonts.
 ## Mode C — Audit & improve an existing page (impeccable's home turf)
 
 **C0 · Read the work.** Read the existing file(s) / project. Treat the existing brand and identity as
-**fixed** unless the user asks to change it (impeccable's "identity-preservation wins").
+**fixed** unless the user asks to change it (impeccable's "identity-preservation wins"). If the goal of the
+pass is unclear, ask **one** quick question (what should this improvement achieve?); otherwise the existing
+page is the content — proceed without an interview.
 
 **C1 · Diagnose.** Read impeccable `reference/audit.md` + `critique.md` and run them over the code. Cross-
 check with the ui-ux-pro-max rule set (`--domain ux` / the SKILL.md checklist). Produce a short, concrete
