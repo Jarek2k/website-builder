@@ -97,10 +97,32 @@ you just added against its craft bar. Fix what it flags. (Automatic; no need to 
 **A4 · Audit & harden — impeccable + ui-ux-pro-max checklist.** Read impeccable `reference/audit.md`,
 `polish.md`, `harden.md` and run them as a **reviewer**. Then cross-check against ui-ux-pro-max's rule set.
 Do **not** run impeccable's `craft`/`shape`/`init` here — those rebuild and would re-litigate A2.
+
+**Run the deterministic composition check — it is blocking.** Measure the built artifact at every breakpoint
+*before* you say "done"; do not sign off from an eyeballed screenshot:
+```bash
+node "$PR/skills/website/scripts/verify-composition.mjs" <built-file-or-local-URL> --breakpoints 390,768,1280
+```
+It renders headless via the system Chrome (no npm install) and prints a JSON array of violations to stdout
+(`{rule, severity, breakpoint, selector, measured, expected, note}`) plus a summary line. Treat **every**
+violation as a finding: fix it, or write one sentence saying why it is intentional (e.g. deliberately unequal
+card heights). Then **re-run until the output is clean or every remaining entry is justified.** A
+`severity:"error"` entry (horizontal overflow, contrast below the minimum) exits non-zero and must **not**
+survive to "done". If it emits an `environment` finding (no Chrome available), fall back to reading
+screenshots and say so.
+
 **Explicitly verify the failure modes a strong taste-build tends to miss** (these cost real points in the
-bake-off): no horizontal overflow / heading clipping at 390px and 768px; body contrast ≥ 4.5:1 with margin;
-a color fallback when using OKLCH; `prefers-reduced-motion` honored; content visible without JS (no section
-gated behind a reveal). Render and read a screenshot at desktop **and** mobile widths before declaring done.
+bake-off), the first four of which the script measures for you:
+- **No horizontal overflow** at 390/768/1280 — `documentElement.scrollWidth ≤ clientWidth` (Rule 1).
+- **Equal sibling heights** — cards/columns in one flex/grid row don't disagree in height (Rule 2).
+- **Width utilization** — text blocks aren't floating narrow and left-anchored in a wide container (Rule 3).
+- **Body contrast ≥ 4.5:1** (≥ 3:1 for large/bold text) with margin (Rule 4).
+- Heading clipping at 390/768; a color fallback when using OKLCH; `prefers-reduced-motion` honored; content
+  visible without JS (no section gated behind a reveal).
+
+**Composition balance — equal heights, width utilization — is part of the check, not just the a11y
+checklist.** Render and read a screenshot at desktop **and** mobile widths as well: the script measures, the
+screenshot confirms.
 
 ---
 
@@ -142,6 +164,16 @@ quality → `polish`; production-readiness (errors, i18n, edge/empty states) →
 `optimize`; responsiveness → `adapt`. Re-render and read a screenshot to confirm each fix. Don't invent
 defects to look busy; a clean "first pass is solid" is a valid result.
 
+**C3 · Verify (blocking).** Before saying "done", run the same deterministic composition check as **A4** on
+the improved file at all breakpoints:
+```bash
+node "$PR/skills/website/scripts/verify-composition.mjs" <file-or-local-URL> --breakpoints 390,768,1280
+```
+Overflow, unequal sibling heights, poor width utilization, and low contrast are measured, not guessed. Every
+violation is either fixed or explicitly justified as intentional; re-run until the output is clean or
+justified. This is part of the diagnosis in C1 too — use it to ground the findings list in numbers, not just
+what the screenshot looks like.
+
 ---
 
 ## Cross-cutting rules (all modes)
@@ -150,7 +182,9 @@ defects to look busy; a clean "first pass is solid" is a valid result.
   Never run both as builders on the same surface — that's the conflict this plugin exists to prevent.
 - **Hand-off contract.** Each phase receives the previous phase's concrete file paths + the design tokens.
   Never re-run an earlier generative phase.
-- **Verify visually.** Before saying "done", render the result and read a screenshot at mobile + desktop.
-  A screenshot you didn't read doesn't count.
+- **Verify by measuring, then looking.** Before saying "done", run the blocking composition check
+  (`skills/website/scripts/verify-composition.mjs`, see A4) and clear or justify every violation, **then**
+  render and read a screenshot at mobile + desktop. Numbers catch what the eye misses; a screenshot you
+  didn't read doesn't count.
 - **Match the project.** In an existing repo, use its framework, components, icon set, and conventions;
   don't introduce a second stack.

@@ -22,6 +22,23 @@ The lane split (impeccable builds, ui-ux-pro-max provides data + audits, emil do
 motion) was decided by a blind head-to-head bake-off — see
 [`scripts/bake-off/`](../scripts/bake-off/README.md).
 
+## First-party orchestrator code
+
+The `website` skill is **not** vendored — it is this repo's own orchestrator. Any
+tooling the orchestrator itself runs lives under
+[`plugin/skills/website/scripts/`](../plugin/skills/website/scripts/README.md) and
+is safe there: `sync-upstreams.sh` only `rm -rf`s the vendored skill targets, so a
+file placed inside a vendored skill (e.g. `plugin/skills/impeccable/`) would be
+wiped on the next upstream bump. Keep first-party scripts out of the vendored dirs.
+
+The deterministic composition check (`verify-composition.mjs`) lives here and is
+wired into the audit steps (Mode A · A4, Mode C · C3) as a blocking gate. It has
+its own zero-dependency test suite:
+
+```bash
+node --test 'plugin/skills/website/scripts/test/*.test.mjs'
+```
+
 ## Keeping upstreams current
 
 **Upstream skills → this repo (automatic, PR-based).** A weekly GitHub Action
