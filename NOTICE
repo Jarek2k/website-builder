@@ -4,10 +4,10 @@ website-builder — bundled third-party skills
 This plugin vendors the skills below. Each retains its own license;
 full copies live in third_party/<name>/.
 
-- ui-ux-pro-max — MIT — https://github.com/nextlevelbuilder/ui-ux-pro-max-skill @ v2.9.0 (sha 65e2319949)
-- emil-design-eng — MIT — https://github.com/emilkowalski/skills @ 8a4a02183f466f54315138e5f94b349df5b84acf (sha 8a4a02183f)
-- review-animations — MIT — https://github.com/emilkowalski/skills @ 8a4a02183f466f54315138e5f94b349df5b84acf (sha 8a4a02183f)
-- impeccable — Apache-2.0 — https://github.com/pbakaus/impeccable @ skill-v3.8.0 (sha da18929df0)
+- ui-ux-pro-max — MIT — https://github.com/nextlevelbuilder/ui-ux-pro-max-skill @ v2.10.1 (sha 4baa399d00)
+- emil-design-eng — MIT — https://github.com/emilkowalski/skills @ 1274a0584c4fe9e94304a4e29094cefe5eb51dbe (sha 1274a0584c)
+- review-animations — MIT — https://github.com/emilkowalski/skills @ 1274a0584c4fe9e94304a4e29094cefe5eb51dbe (sha 1274a0584c)
+- impeccable — Apache-2.0 — https://github.com/pbakaus/impeccable @ skill-v3.9.1 (sha 44c27a72af)
 
 Apache-2.0 components (impeccable): see third_party/impeccable/LICENSE
 (and NOTICE, if present) per Apache-2.0 section 4.
