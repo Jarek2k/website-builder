@@ -24,6 +24,19 @@ node verify-composition.mjs --target ./dist/index.html -b 390,1280
 | 2 | `unequal-sibling-heights` | warn | cards/columns in one flex/grid row that differ > 4% **and** > 8px in height |
 | 3 | `text-width-utilization` | info | a text block floating narrow (< 55%) and left-anchored in a wide (> 480px) container |
 | 4 | `contrast` | error | effective text vs background below WCAG AA (4.5:1 normal, 3:1 large/bold) |
+| + | `impeccable:<rule>` | warn/info | the full impeccable browser detector rule set, injected into the same page (see below) |
+
+**impeccable integration.** When the sibling `impeccable` skill is present (plugin
+layout: `../../impeccable/scripts/detector/detect-antipatterns-browser.js`), its
+self-contained browser detector bundle is injected into the rendered page
+(`autoScan:false`, no overlays) and `window.impeccableDetectAsync()` is called at
+every breakpoint. Findings are deduped on (rule, selector) across breakpoints and
+reported as `impeccable:<rule>` — anti-slop tells **and** the layout-measured
+quality rules (cramped padding, line length, text overflow, viewport-edge text,
+monotonous spacing, …) that impeccable's own static engine cannot run and whose
+CLI URL mode would require puppeteer. Severity maps to `warn` (advisory rules →
+`info`), so the exit-code contract is unchanged. Opt out with `--no-impeccable`;
+point elsewhere with `--impeccable-bundle <path>` / `VERIFY_COMPOSITION_IMPECCABLE`.
 
 **Output.** A JSON array to **stdout** — one entry per violation
 `{rule, severity, breakpoint, selector, measured, expected, note}` — and a

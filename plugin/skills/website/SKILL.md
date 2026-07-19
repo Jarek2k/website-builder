@@ -20,7 +20,8 @@ You are the conductor of a small team of specialist design skills bundled inside
 method and apply it. Your job is sequencing, hand-off, and keeping two builders from doing the same work
 twice.
 
-The lane assignment below was decided by a blind head-to-head bake-off (see `scripts/bake-off/`):
+The lane assignment below was decided by a blind head-to-head bake-off (see `scripts/bake-off/` in the
+plugin repo — not under `$PR`):
 **impeccable** produces the more distinctive, less-AI-looking, higher-craft build; **ui-ux-pro-max** is
 the stronger systematic data source and production/accessibility checklist; **emil** is the motion
 specialist. Respect those lanes.
@@ -30,10 +31,11 @@ specialist. Respect those lanes.
 | Role | Asset to use | How |
 |---|---|---|
 | Data / inspiration | `ui-ux-pro-max` | run its engine: `python3 "$PR/skills/ui-ux-pro-max/scripts/search.py" "<keywords>" --design-system` |
-| Production checklist / audit | `ui-ux-pro-max` | read the rule sections of `$PR/skills/ui-ux-pro-max/SKILL.md`, or query `--domain ux\|style\|color` |
+| Production checklist / audit | `ui-ux-pro-max` | read the rule sections of `$PR/skills/ui-ux-pro-max/SKILL.md`, or query `--domain ux\|style\|color` (A4 lists the concrete queries) |
 | Builder (taste, anti-slop) | `impeccable` | read `$PR/skills/impeccable/SKILL.md` + the relevant `reference/<command>.md`, then build |
+| Deterministic page QA | own script + `impeccable` detector | `node "$PR/skills/website/scripts/verify-composition.mjs" <file-or-URL>` (auto-injects impeccable's browser detector → `impeccable:<rule>` findings) plus the static source scan `node "$PR/skills/impeccable/scripts/detect.mjs" --json <src>` (see A4) |
 | Motion | `emil-design-eng` | read `$PR/skills/emil-design-eng/SKILL.md` and apply |
-| Motion QA gate | `review-animations` | read `$PR/skills/review-animations/SKILL.md` and apply to the motion you added |
+| Motion QA gate | `review-animations` | read `$PR/skills/review-animations/SKILL.md` + its `STANDARDS.md`, apply to the motion you added |
 
 **How you "use" a specialist:** these skills are bundled as a knowledge + script library. Load one by
 **Reading its `SKILL.md`** (and only the `reference/` files it points you to for the current task) and
@@ -78,8 +80,21 @@ python3 "$PR/skills/ui-ux-pro-max/scripts/search.py" "<product type> <industry> 
 ```
 Treat its palette / font-pairing / style / pattern as **candidates and reference data**, not a lock.
 Note its UX-rule domains for the later audit. Do **not** let it author the final page — it is data here.
+When the confirmed brief signals it, set the engine's dials instead of prompting around them:
+`--variance 1-10` (centered/minimal ↔ bold/asymmetric), `--motion 1-10` (subtle ↔ complex),
+`--density 1-10` (spacious ↔ dashboard-dense). For multi-page or multi-session work add `--persist`
+(+ `--page <name>`) so it writes `design-system/<slug>/MASTER.md` + page overrides — that file then rides
+the hand-off contract instead of re-deriving tokens from chat memory.
 
-**A2 · Build — impeccable (lead).** Read `$PR/skills/impeccable/SKILL.md`, then `reference/craft.md`, and
+**A2 · Build — impeccable (lead).** First honor impeccable's setup contract: run
+`node "$PR/skills/impeccable/scripts/context.mjs"` once. If it prints `NO_PRODUCT_MD`, do **not** run the
+init interview (A0 already covered discovery) — follow `reference/init.md`'s file format and write a compact
+`PRODUCT.md` straight from the confirmed A0 brief (register, users, purpose, brand direction,
+anti-references), then continue. Also pull the stack guardrails once — they are data, not a second builder:
+```bash
+python3 "$PR/skills/ui-ux-pro-max/scripts/search.py" "<page type> <feature keywords>" --stack <nextjs|astro|html-tailwind|...>
+```
+Then read `$PR/skills/impeccable/SKILL.md`, then `reference/craft.md`, and
 the references craft.md points to (typically `layout`, `typeset`, `colorize`, `animate`, plus `brand` for
 marketing surfaces or `product` for app UI). **Shape is already done and confirmed in A0 — skip craft.md's
 Step 1 (shape); treat the confirmed brief as the locked direction** and go straight to its build steps. You
@@ -91,12 +106,25 @@ actually gets made.
 interactive surfaces only. **Constraint:** do not restructure layout or change the palette/type from A2 —
 motion only.
 
-**A3b · Motion QA — review-animations.** Read `$PR/skills/review-animations/SKILL.md` and review the motion
-you just added against its craft bar. Fix what it flags. (Automatic; no need to ask the user.)
+**A3b · Motion QA — review-animations (blocking).** Read `$PR/skills/review-animations/SKILL.md` **and its
+`STANDARDS.md`** (the exact curves, durations, and thresholds to cite), then run its full protocol on the
+motion you just added: findings table, tiered verdict, explicit **Block/Approve**. A Block is binding —
+apply its remedial hierarchy (delete → reduce → fix easing → …) and re-review until it approves.
+(Automatic; no need to ask the user.)
 
 **A4 · Audit & harden — impeccable + ui-ux-pro-max checklist.** Read impeccable `reference/audit.md`,
-`polish.md`, `harden.md` and run them as a **reviewer**. Then cross-check against ui-ux-pro-max's rule set.
-Do **not** run impeccable's `craft`/`shape`/`init` here — those rebuild and would re-litigate A2.
+`polish.md`, `harden.md` and run them as a **reviewer**. Do **not** run impeccable's `craft`/`shape`/`init`
+here — those rebuild and would re-litigate A2.
+
+Cross-check with ui-ux-pro-max **concretely** — run these, don't paraphrase the rules from memory:
+```bash
+python3 "$PR/skills/ui-ux-pro-max/scripts/search.py" "accessibility contrast focus keyboard touch" --domain ux -n 5
+python3 "$PR/skills/ui-ux-pro-max/scripts/search.py" "spacing layout responsive overflow" --domain ux -n 5
+python3 "$PR/skills/ui-ux-pro-max/scripts/search.py" "forms feedback loading error states" --domain ux -n 5
+```
+and walk its Pre-Delivery Checklist explicitly: contrast ≥ 4.5:1 (≥ 3:1 large/secondary), touch targets
+≥ 44×44, visible `:focus-visible`, `prefers-reduced-motion` honored, no horizontal scroll at 375, dark-mode
+contrast checked separately if a dark theme ships.
 
 **Run the deterministic composition check — it is blocking.** Measure the built artifact at every breakpoint
 *before* you say "done"; do not sign off from an eyeballed screenshot:
@@ -110,6 +138,20 @@ card heights). Then **re-run until the output is clean or every remaining entry 
 `severity:"error"` entry (horizontal overflow, contrast below the minimum) exits non-zero and must **not**
 survive to "done". If it emits an `environment` finding (no Chrome available), fall back to reading
 screenshots and say so.
+
+**The composition check also carries impeccable's detector — treat its findings as part of the gate.**
+verify-composition injects impeccable's self-contained browser detector into the same rendered page and
+reports its full rule set as `impeccable:<rule>` entries (severity warn/info, exit code unaffected). That
+is the only dependency-free path to the layout-measured rules — cramped padding, line length > 80ch, text
+overflow, body text at the viewport edge, monotonous spacing, nested cards — plus every anti-slop tell
+(impeccable's own `detect.mjs <URL>` mode needs puppeteer; running it on a *file* silently skips exactly
+those layout rules — the "spacing was never checked" failure mode). Handle them: `category:"slop"` findings
+are anti-slop violations — fix them, don't justify; `category:"quality"` findings are defects — fix or
+justify in one sentence, same as the composition rules. Additionally run the cheap static pass over the
+**source** (catches Tailwind/JSX-level tells before rendering; exit 0 = clean, exit 2 = findings):
+```bash
+node "$PR/skills/impeccable/scripts/detect.mjs" --json <src-files-or-dir>
+```
 
 **Explicitly verify the failure modes a strong taste-build tends to miss** (these cost real points in the
 bake-off), the first four of which the script measures for you:
@@ -153,9 +195,14 @@ Download the brand assets to preserve — **logo**, brand colors, fonts.
 pass is unclear, ask **one** quick question (what should this improvement achieve?); otherwise the existing
 page is the content — proceed without an interview.
 
-**C1 · Diagnose.** Read impeccable `reference/audit.md` + `critique.md` and run them over the code. Cross-
-check with the ui-ux-pro-max rule set (`--domain ux` / the SKILL.md checklist). Produce a short, concrete
-findings list (spacing, typography, hierarchy, color/contrast, a11y, anti-slop tells, motion, states).
+**C1 · Diagnose.** Read impeccable `reference/audit.md` + `critique.md` and run them over the code. Ground
+the diagnosis in the deterministic instruments first: run the composition check from C3 (it injects
+impeccable's browser detector — the `impeccable:<rule>` findings are part of the evidence) and the static
+source scan `node "$PR/skills/impeccable/scripts/detect.mjs" --json <files>`. Cross-check with the
+ui-ux-pro-max rule set (the same three `--domain ux` queries as A4 / the SKILL.md checklist). Produce a
+short, concrete findings list (spacing, typography, hierarchy, color/contrast, a11y, anti-slop tells,
+motion, states). Detector and script output are defect evidence only — a clean run is not proof the design
+is strong.
 
 **C2 · Fix with the matching command.** For each finding, read and apply the matching impeccable reference
 and edit in place: spacing/rhythm → `layout`; typography → `typeset`; flat/garish color → `colorize`;
@@ -164,15 +211,17 @@ quality → `polish`; production-readiness (errors, i18n, edge/empty states) →
 `optimize`; responsiveness → `adapt`. Re-render and read a screenshot to confirm each fix. Don't invent
 defects to look busy; a clean "first pass is solid" is a valid result.
 
-**C3 · Verify (blocking).** Before saying "done", run the same deterministic composition check as **A4** on
-the improved file at all breakpoints:
+**C3 · Verify (blocking).** Before saying "done", run the same **two** deterministic gates as **A4** on the
+improved page — the composition check (which injects impeccable's browser detector) at all breakpoints, and
+the static source scan:
 ```bash
 node "$PR/skills/website/scripts/verify-composition.mjs" <file-or-local-URL> --breakpoints 390,768,1280
+node "$PR/skills/impeccable/scripts/detect.mjs" --json <src-files-or-dir>
 ```
-Overflow, unequal sibling heights, poor width utilization, and low contrast are measured, not guessed. Every
-violation is either fixed or explicitly justified as intentional; re-run until the output is clean or
-justified. This is part of the diagnosis in C1 too — use it to ground the findings list in numbers, not just
-what the screenshot looks like.
+Overflow, sibling heights, width utilization, contrast, cramped padding, line length, and spacing rhythm are
+measured, not guessed. Every violation is either fixed or explicitly justified as intentional; re-run until
+the output is clean or justified. This is part of the diagnosis in C1 too — use it to ground the findings
+list in numbers, not just what the screenshot looks like.
 
 ---
 
@@ -182,9 +231,14 @@ what the screenshot looks like.
   Never run both as builders on the same surface — that's the conflict this plugin exists to prevent.
 - **Hand-off contract.** Each phase receives the previous phase's concrete file paths + the design tokens.
   Never re-run an earlier generative phase.
-- **Verify by measuring, then looking.** Before saying "done", run the blocking composition check
-  (`skills/website/scripts/verify-composition.mjs`, see A4) and clear or justify every violation, **then**
-  render and read a screenshot at mobile + desktop. Numbers catch what the eye misses; a screenshot you
-  didn't read doesn't count.
+- **Verify by measuring, then looking.** Before saying "done", run **both** blocking gates — the composition
+  check (`skills/website/scripts/verify-composition.mjs`, which injects impeccable's browser detector; clear
+  the `impeccable:*` findings too) and the static source scan (`skills/impeccable/scripts/detect.mjs
+  --json`, see A4) — and clear or justify every violation, **then** render and read a screenshot at mobile +
+  desktop. Numbers catch what the eye misses; a screenshot you didn't read doesn't count.
+- **Ongoing repos: offer the edit-time hook once.** impeccable can auto-scan every Edit/Write with its
+  static detector (`node "$PR/skills/impeccable/scripts/hook-admin.mjs" on`). It writes to the project's
+  `.claude/settings.local.json`, so ask the user first; never enable it unprompted. Static engine only —
+  the URL gates above still run before "done".
 - **Match the project.** In an existing repo, use its framework, components, icon set, and conventions;
   don't introduce a second stack.

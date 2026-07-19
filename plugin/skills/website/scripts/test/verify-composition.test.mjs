@@ -5,7 +5,7 @@
  * system Chrome. If no Chrome is available the whole suite skips cleanly (so CI
  * without a browser is green rather than red).
  *
- * Run:  node --test plugin/skills/website/scripts/test/
+ * Run:  node --test 'plugin/skills/website/scripts/test/*.test.mjs'
  */
 
 import { test } from 'node:test';
@@ -18,9 +18,10 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.resolve(here, '..', 'verify-composition.mjs');
 const FIX = (name) => path.join(here, 'fixtures', name);
 
-function run(fixture, breakpoints) {
+function run(fixture, breakpoints, extraArgs = []) {
   const args = [SCRIPT, FIX(fixture)];
   if (breakpoints) args.push('--breakpoints', breakpoints);
+  args.push(...extraArgs);
   const res = spawnSync('node', args, { encoding: 'utf8' });
   let violations = [];
   try {
@@ -91,4 +92,27 @@ test('reveal-gated section is forced visible and still measured (contrast caught
     gated.length >= 1,
     `reveal-gated text should be revealed and measured; got ${JSON.stringify(violations.map((v) => `${v.rule}:${v.selector}`))}`
   );
+});
+
+test('impeccable integration: injected detector reports slop + layout-measured rules', { skip }, () => {
+  const { code, violations } = run('impeccable-slop.html', '390');
+  const imp = violations.filter((v) => v.rule.startsWith('impeccable:'));
+  assert.ok(imp.length >= 3, `expected several impeccable findings, got ${JSON.stringify(violations.map((v) => v.rule))}`);
+  // A slop tell and a layout-measured quality rule must both surface —
+  // the layout rules are the ones impeccable's static engine cannot run.
+  assert.ok(imp.some((v) => v.measured.category === 'slop'), 'expected a slop-category finding');
+  assert.ok(
+    imp.some((v) => ['impeccable:cramped-padding', 'impeccable:text-overflow', 'impeccable:body-text-viewport-edge', 'impeccable:oversized-h1'].includes(v.rule)),
+    'expected a layout-measured rule finding'
+  );
+  // Detector findings are warn/info only — they must never flip the exit code
+  // by themselves (the fixture's own contrast error does that here).
+  assert.ok(imp.every((v) => v.severity === 'warn' || v.severity === 'info'), 'impeccable findings must be warn/info');
+  assert.equal(code, 1, 'the fixture has a real contrast error, so exit 1');
+});
+
+test('impeccable integration: --no-impeccable suppresses injected findings', { skip }, () => {
+  const { violations } = run('impeccable-slop.html', '390', ['--no-impeccable']);
+  const imp = violations.filter((v) => v.rule.startsWith('impeccable:'));
+  assert.deepEqual(imp, [], 'expected no impeccable findings with --no-impeccable');
 });

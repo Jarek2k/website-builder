@@ -11,6 +11,15 @@
  *   3. text-width-utilization   — a text block floats narrow, left-anchored, in a wide container
  *   4. contrast                 — effective text vs background below WCAG AA
  *
+ * Additionally, when the sibling impeccable skill is present (plugin layout),
+ * its self-contained browser detector bundle is injected into the same rendered
+ * page and its full rule set (anti-slop tells + layout-measured quality rules:
+ * cramped padding, line length, text overflow, monotonous spacing, …) is
+ * reported as `impeccable:<rule>` findings. This is the only dependency-free
+ * path to those rules — impeccable's own CLI URL mode requires puppeteer.
+ * Disable with --no-impeccable; findings map to warn (advisory rules → info),
+ * so the exit-code contract below is unchanged.
+ *
  * Rendering uses the SYSTEM Chrome/Chromium driven directly over the Chrome
  * DevTools Protocol (CDP) via Node's built-in WebSocket/fetch — no puppeteer,
  * no npm install, no heavy bundle. If no Chrome is found the script degrades
@@ -35,7 +44,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 
 // ---------------------------------------------------------------------------
 // Thresholds — the one place to tune the checks.
@@ -674,6 +683,31 @@ class CDP {
   }
 }
 
+// ---------------------------------------------------------------------------
+// impeccable browser-detector bundle (optional, dependency-free integration).
+// The bundle is a self-contained script the impeccable skill ships for its
+// live overlay; injected here it exposes window.impeccableDetectAsync which
+// returns JSON-serialized findings — no puppeteer, no npm install.
+// ---------------------------------------------------------------------------
+
+function findImpeccableBundle(explicitPath) {
+  const candidates = [];
+  if (explicitPath) candidates.push(explicitPath);
+  if (process.env.VERIFY_COMPOSITION_IMPECCABLE) candidates.push(process.env.VERIFY_COMPOSITION_IMPECCABLE);
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  candidates.push(
+    path.join(here, '..', '..', 'impeccable', 'scripts', 'detector', 'detect-antipatterns-browser.js')
+  );
+  for (const p of candidates) {
+    try {
+      return { path: p, source: fs.readFileSync(p, 'utf8') };
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
 async function waitForDevToolsPort(userDataDir, timeoutMs) {
   const file = path.join(userDataDir, 'DevToolsActivePort');
   const start = Date.now();
@@ -717,7 +751,7 @@ function launchChrome(execPath, userDataDir, headlessMode) {
 // Render a target at each breakpoint and collect violations.
 // ---------------------------------------------------------------------------
 
-async function renderAndMeasure(execPath, targetUrl, breakpoints) {
+async function renderAndMeasure(execPath, targetUrl, breakpoints, impeccableSource) {
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'verify-composition-'));
   let child = null;
   let ws = null;
@@ -784,6 +818,29 @@ async function renderAndMeasure(execPath, targetUrl, breakpoints) {
     await loaded;
     await sleep(SETTLE_MS);
 
+    // Inject the impeccable browser detector once per page (if available).
+    // autoScan:false keeps it silent — no overlays, no banner; we pull
+    // findings explicitly per breakpoint via impeccableDetectAsync().
+    let impeccableReady = false;
+    if (impeccableSource) {
+      const boot = await cdp.send(
+        'Runtime.evaluate',
+        {
+          expression:
+            `window.__IMPECCABLE_CONFIG__ = { autoScan: false };\n` +
+            impeccableSource +
+            `\n;typeof window.impeccableDetectAsync === 'function'`,
+          returnByValue: true,
+        },
+        sessionId
+      );
+      impeccableReady = !boot.exceptionDetails && boot.result?.value === true;
+      if (!impeccableReady) {
+        const why = boot.exceptionDetails?.exception?.description || 'bundle did not expose impeccableDetectAsync';
+        process.stderr.write(`verify-composition: impeccable detector failed to initialize — composition rules only (${why.split('\n')[0]})\n`);
+      }
+    }
+
     const cfgBase = {
       OVERFLOW_TOLERANCE_PX,
       SIBLING_HEIGHT_MIN_DIFF_PX,
@@ -802,6 +859,8 @@ async function renderAndMeasure(execPath, targetUrl, breakpoints) {
     };
 
     const violations = [];
+    const seenImpeccable = new Set(); // dedupe (rule|selector) across breakpoints
+    let impeccableFailedOnce = false;
     for (const bp of breakpoints) {
       await cdp.send(
         'Emulation.setDeviceMetricsOverride',
@@ -822,6 +881,39 @@ async function renderAndMeasure(execPath, targetUrl, breakpoints) {
       }
       const value = result.result?.value;
       if (value?.violations) violations.push(...value.violations);
+
+      if (impeccableReady) {
+        const det = await cdp.send(
+          'Runtime.evaluate',
+          { expression: 'window.impeccableDetectAsync()', awaitPromise: true, returnByValue: true },
+          sessionId
+        );
+        if (det.exceptionDetails) {
+          if (!impeccableFailedOnce) {
+            impeccableFailedOnce = true;
+            const why = det.exceptionDetails.exception?.description || det.exceptionDetails.text || 'unknown error';
+            process.stderr.write(`verify-composition: impeccable detector scan failed at ${bp}px — ${why.split('\n')[0]}\n`);
+          }
+        } else if (Array.isArray(det.result?.value)) {
+          for (const entry of det.result.value) {
+            if (entry.isHidden) continue;
+            for (const f of entry.findings || []) {
+              const key = `${f.type}|${entry.selector}`;
+              if (seenImpeccable.has(key)) continue;
+              seenImpeccable.add(key);
+              violations.push({
+                rule: `impeccable:${f.type}`,
+                severity: f.severity === 'advisory' ? 'info' : 'warn',
+                breakpoint: bp,
+                selector: entry.selector,
+                measured: { category: f.category, detail: f.detail || null },
+                expected: { clean: true },
+                note: f.description ? `${f.name} — ${f.description}` : f.name,
+              });
+            }
+          }
+        }
+      }
     }
 
     await cdp.send('Target.closeTarget', { targetId });
@@ -836,7 +928,7 @@ async function renderAndMeasure(execPath, targetUrl, breakpoints) {
 // ---------------------------------------------------------------------------
 
 function parseArgs(argv) {
-  const out = { target: null, breakpoints: DEFAULT_BREAKPOINTS, help: false };
+  const out = { target: null, breakpoints: DEFAULT_BREAKPOINTS, help: false, impeccable: true, impeccableBundle: null };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === '--help' || arg === '-h') {
@@ -849,6 +941,12 @@ function parseArgs(argv) {
       out.breakpoints = parseBreakpoints(argv[++i]);
     } else if (arg.startsWith('--breakpoints=')) {
       out.breakpoints = parseBreakpoints(arg.slice('--breakpoints='.length));
+    } else if (arg === '--no-impeccable') {
+      out.impeccable = false;
+    } else if (arg === '--impeccable-bundle') {
+      out.impeccableBundle = argv[++i];
+    } else if (arg.startsWith('--impeccable-bundle=')) {
+      out.impeccableBundle = arg.slice('--impeccable-bundle='.length);
     } else if (!arg.startsWith('-') && !out.target) {
       out.target = arg;
     }
@@ -882,11 +980,15 @@ Usage:
   node verify-composition.mjs <file-or-url> [--breakpoints 390,768,1280]
 
 Options:
-  -t, --target <path|url>     target to render (or pass positionally)
-  -b, --breakpoints <list>    comma-separated widths (default: 390,768,1280)
-  -h, --help                  show this help
+  -t, --target <path|url>       target to render (or pass positionally)
+  -b, --breakpoints <list>      comma-separated widths (default: 390,768,1280)
+      --no-impeccable           skip the injected impeccable detector rules
+      --impeccable-bundle <p>   explicit path to detect-antipatterns-browser.js
+  -h, --help                    show this help
 
-Checks: horizontal-overflow, unequal-sibling-heights, text-width-utilization, contrast.
+Checks: horizontal-overflow, unequal-sibling-heights, text-width-utilization, contrast —
+plus, when the sibling impeccable skill is found, its full browser rule set reported as
+impeccable:<rule> (severity warn/info; never changes the exit code).
 stdout = JSON array of violations; stderr = human summary. Exit 1 on any error-severity
 violation, exit 2 if it could not render (no Chrome / navigation failure).`;
 
@@ -957,9 +1059,19 @@ async function main() {
     return;
   }
 
+  let bundle = null;
+  if (opts.impeccable) {
+    bundle = findImpeccableBundle(opts.impeccableBundle);
+    if (!bundle) {
+      process.stderr.write(
+        'verify-composition: impeccable detector bundle not found — composition rules only\n'
+      );
+    }
+  }
+
   let violations;
   try {
-    violations = await renderAndMeasure(chrome, target.url, opts.breakpoints);
+    violations = await renderAndMeasure(chrome, target.url, opts.breakpoints, bundle?.source ?? null);
   } catch (err) {
     degrade(`rendering failed — ${err.message}`, `Chrome: ${chrome}`);
     return;
