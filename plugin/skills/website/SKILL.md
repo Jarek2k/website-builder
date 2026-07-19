@@ -236,6 +236,10 @@ list in numbers, not just what the screenshot looks like.
   the `impeccable:*` findings too) and the static source scan (`skills/impeccable/scripts/detect.mjs
   --json`, see A4) — and clear or justify every violation, **then** render and read a screenshot at mobile +
   desktop. Numbers catch what the eye misses; a screenshot you didn't read doesn't count.
+- **The stop guard is on your side.** This plugin ships a Stop hook that blocks finishing when web-surface
+  files were edited but the composition gate never ran. If it fires, don't argue with it — run the gate it
+  names (or state in one sentence why no renderable page applies). Disable only via
+  `WEBSITE_BUILDER_GUARD=off`.
 - **Ongoing repos: offer the edit-time hook once.** impeccable can auto-scan every Edit/Write with its
   static detector (`node "$PR/skills/impeccable/scripts/hook-admin.mjs" on`). It writes to the project's
   `.claude/settings.local.json`, so ask the user first; never enable it unprompted. Static engine only —
