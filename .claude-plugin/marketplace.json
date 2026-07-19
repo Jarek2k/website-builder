@@ -2,7 +2,7 @@
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "jarek-plugins",
   "description": "Jarek's personal Claude Code plugin catalog.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "owner": {
     "name": "Jarek",
     "email": "jarekgster@googlemail.com"
@@ -12,7 +12,7 @@
       "name": "website-builder",
       "source": "./plugin",
       "description": "One-command website builder: orchestrates design-system data, a taste-driven build, motion, and an anti-slop audit across three modes (new / from-reference / improve-existing).",
-      "version": "0.1.4",
+      "version": "0.1.5",
       "category": "design",
       "keywords": [
         "ui",
